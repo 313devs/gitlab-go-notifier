@@ -6,20 +6,25 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/313devs/gitlab-go-notifier/handler"
+	"github.com/313devs/gitlab-go-notifier/repository/commit"
 )
 
-func loadRoutes() *chi.Mux {
+func (a *App) loadRoutes(){
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello, World!"))
 	})
-	router.Route("/commit", loadCommitRoutes)
+	router.Route("/commit", a.loadCommitRoutes)
 
-	return router
+	a.router = router
 }
-func loadCommitRoutes(router chi.Router) {
-	commitHandler := handler.Commit{}
+func (a *App) loadCommitRoutes(router chi.Router) {
+	commitHandler := handler.Commit{
+		Repo: &commit.RedisRepo{
+			Client: a.rdb,
+		},
+	}
 	router.Get("/", commitHandler.GetCommits)
 	router.Post("/", commitHandler.PostCommit)
 }

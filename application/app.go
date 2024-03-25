@@ -26,13 +26,15 @@ func New() *App {
 	rdAddr := os.Getenv("REDIS_HOST")+":"+os.Getenv("REDIS_PORT")
 	rdPassword := os.Getenv("REDIS_PASSWORD")
 	app := &App{
-		router: loadRoutes(),
 		rdb: redis.NewClient(&redis.Options{
 			Addr:    rdAddr,
 			Password: rdPassword,
 			DB:       0,
 		}),
 	}
+
+	app.loadRoutes()
+
 	return app
 }
 func (a *App) Start(ctx context.Context) error {

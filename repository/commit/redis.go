@@ -14,10 +14,11 @@ type RedisRepo struct {
 	Client *redis.Client
 }
 
+
 func (r *RedisRepo) Insert(ctx context.Context, commit model.Commit) error {
 	data, err := json.Marshal(commit)
 	if err != nil {
-		return fmt.Errorf("failed to marshal commit: %w", err)
+		return fmt.Errorf("failed to encode order: %w", err)
 	}
 
 	txn := r.Client.TxPipeline()
@@ -25,15 +26,18 @@ func (r *RedisRepo) Insert(ctx context.Context, commit model.Commit) error {
 	res := txn.SetNX(ctx, commit.Sha, string(data), 0)
 	if err := res.Err(); err != nil {
 		txn.Discard()
-		return fmt.Errorf("failed to set commit: %w", err)
+		return fmt.Errorf("failed to set: %w", err)
 	}
-	if err := txn.SAdd(ctx, commit.Sha, string(data), 0).Err(); err != nil {
+
+	if err := txn.SAdd(ctx, "commits", commit.Sha).Err(); err != nil {
 		txn.Discard()
-		return fmt.Errorf("failed to set commit: %w", err)
+		return fmt.Errorf("failed to add to orders set: %w", err)
 	}
+
 	if _, err := txn.Exec(ctx); err != nil {
-		return fmt.Errorf("failed to execute transaction: %w", err)
+		return fmt.Errorf("failed to exec: %w", err)
 	}
+
 	return nil
 }
 
