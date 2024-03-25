@@ -3,9 +3,12 @@ package application
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -16,9 +19,19 @@ type App struct {
 }
 
 func New() *App {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	rdAddr := os.Getenv("REDIS_HOST")+":"+os.Getenv("REDIS_PORT")
+	rdPassword := os.Getenv("REDIS_PASSWORD")
 	app := &App{
 		router: loadRoutes(),
-		rdb:    redis.NewClient(&redis.Options{}),
+		rdb: redis.NewClient(&redis.Options{
+			Addr:    rdAddr,
+			Password: rdPassword,
+			DB:       0,
+		}),
 	}
 	return app
 }
