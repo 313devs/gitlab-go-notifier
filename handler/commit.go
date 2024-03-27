@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/313devs/gitlab-go-notifier/model"
@@ -39,6 +42,16 @@ func (c *Commit) PostCommit(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("failed to insert commit"))
 		return
 	}
+
+	// Send the SHA to Telegram
+	telegramToken := os.Getenv("TELEGRAM_TOKEN")
+	telegramChatID := os.Getenv("TELEGRAM_CHAT_ID")
+	message := fmt.Sprintf("New feature added: %s", Body.Message)
+
+	if strings.Contains(Body.Message, "feat") {
+		sendTelegramMessage(telegramToken, telegramChatID, message)
+	}
+
 	res, err := json.Marshal(commit)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -48,6 +61,25 @@ func (c *Commit) PostCommit(w http.ResponseWriter, r *http.Request) {
 	w.Write(res)
 	w.WriteHeader(http.StatusCreated)
 }
+
 func (c *Commit) GetCommits(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("{all commits}"))
+}
+
+func sendTelegramMessage(token, chatID, message string) error {
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
+	data := map[string]string{
+		"chat_id": chatID,
+		"text":    message,
+	}
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(payload))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
 }
